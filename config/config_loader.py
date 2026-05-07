@@ -187,10 +187,12 @@ class ConfigLoader:
 
     def _load_auto_cookies(self) -> Dict[str, str]:
         for path in self._candidate_auto_cookie_paths():
+            if not path.exists():
+                continue
             cookies = self._load_cookie_file(path)
             if cookies:
                 logger.info("Loaded auto cookies from %s", path)
-                return cookies
+            return cookies
         return {}
 
     def _candidate_auto_cookie_paths(self) -> List[Path]:

@@ -13,8 +13,6 @@ try:
 except ImportError:  # pragma: no cover
     pytest.skip("fastapi not installed", allow_module_level=True)
 
-import asyncio
-
 from config import ConfigLoader
 from server.app import build_app
 from server.jobs import JobManager
@@ -61,6 +59,140 @@ def test_health_endpoint(tmp_path):
         resp = client.get("/api/v1/health")
         assert resp.status_code == 200
         assert resp.json() == {"status": "ok"}
+
+
+def test_root_path_is_not_embedded_frontend(tmp_path):
+    config = ConfigLoader(None)
+    config.update(path=str(tmp_path))
+    app = build_app(config)
+
+    with TestClient(app) as client:
+        resp = client.get("/")
+        assert resp.status_code == 404
+
+
+def test_parse_endpoint_returns_preview_and_download_urls(tmp_path, monkeypatch):
+    class FakeAPIClient:
+        BASE_URL = "https://www.douyin.com"
+
+        def __init__(self, cookies, proxy=None):
+            self.cookies = cookies
+            self.proxy = proxy
+            self.headers = {"User-Agent": "fake-agent"}
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def get_video_detail(self, aweme_id):
+            return {
+                "aweme_id": aweme_id,
+                "desc": "hello video",
+                "create_time": 1710000000,
+                "author": {
+                    "uid": "user-1",
+                    "sec_uid": "sec-user-1",
+                    "nickname": "Alice",
+                    "avatar_larger": {
+                        "url_list": ["https://example.test/avatar.jpg"]
+                    },
+                },
+                "video": {
+                    "duration": 12000,
+                    "cover": {"url_list": ["https://example.test/cover.jpg"]},
+                    "play_addr": {
+                        "url_list": ["https://example.test/video.mp4"]
+                    },
+                },
+            }
+
+        def sign_url(self, url):
+            return url, "fake-agent"
+
+    monkeypatch.setattr("server.app.DouyinAPIClient", FakeAPIClient)
+
+    config = ConfigLoader(None)
+    config.update(path=str(tmp_path))
+    app = build_app(config)
+
+    with TestClient(app) as client:
+        resp = client.post(
+            "/api/v1/parse",
+            json={
+                "url": "复制文案 https://www.douyin.com/video/1234567890123456789"
+            },
+        )
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["aweme_id"] == "1234567890123456789"
+    assert data["title"] == "hello video"
+    assert data["author"]["nickname"] == "Alice"
+    assert data["video"]["preview_url"].startswith("/api/v1/media/")
+    assert data["video"]["download_url"].endswith("?download=1")
+    assert data["cover_url"].startswith("/api/v1/media/")
+
+
+def test_parse_endpoint_resolves_short_url(tmp_path, monkeypatch):
+    class FakeAPIClient:
+        BASE_URL = "https://www.douyin.com"
+
+        def __init__(self, cookies, proxy=None):
+            self.headers = {"User-Agent": "fake-agent"}
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return None
+
+        async def resolve_short_url(self, url):
+            assert url == "https://v.douyin.com/abc/"
+            return "https://www.douyin.com/video/1234567890123456789"
+
+        async def get_video_detail(self, aweme_id):
+            return {
+                "aweme_id": aweme_id,
+                "desc": "short video",
+                "author": {},
+                "video": {
+                    "play_addr": {
+                        "url_list": ["https://example.test/video.mp4"]
+                    },
+                },
+            }
+
+        def sign_url(self, url):
+            return url, "fake-agent"
+
+    monkeypatch.setattr("server.app.DouyinAPIClient", FakeAPIClient)
+
+    config = ConfigLoader(None)
+    config.update(path=str(tmp_path))
+    app = build_app(config)
+
+    with TestClient(app) as client:
+        resp = client.post("/api/v1/parse", json={"url": "v.douyin.com/abc/"})
+
+    assert resp.status_code == 200
+    assert resp.json()["resolved_url"] == "https://www.douyin.com/video/1234567890123456789"
+
+
+def test_parse_endpoint_rejects_non_video_url(tmp_path):
+    config = ConfigLoader(None)
+    config.update(path=str(tmp_path))
+    app = build_app(config)
+
+    with TestClient(app) as client:
+        resp = client.post(
+            "/api/v1/parse",
+            json={"url": "https://www.douyin.com/user/MS4wLjABAAAAxxxx"},
+        )
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "only video urls are supported"
 
 
 def test_download_endpoint_creates_job(tmp_path, monkeypatch):

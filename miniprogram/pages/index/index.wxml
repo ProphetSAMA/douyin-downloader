@@ -1,0 +1,78 @@
+<view class="page">
+  <view class="topbar">
+    <view class="brand">
+      <view class="brand-mark">D</view>
+      <view class="brand-copy">
+        <text class="brand-title">Douyin Downloader</text>
+        <text class="brand-subtitle">粘贴链接，解析预览，保存视频</text>
+      </view>
+    </view>
+    <text class="health {{healthClass}}">{{healthText}}</text>
+  </view>
+
+  <view class="panel input-panel">
+    <view class="section-head">
+      <view>
+        <text class="eyebrow">视频解析</text>
+        <text class="title">粘贴抖音链接</text>
+      </view>
+      <button class="plain-button" size="mini" bindtap="pasteFromClipboard">粘贴</button>
+    </view>
+
+    <textarea
+      class="link-input"
+      value="{{inputText}}"
+      placeholder="粘贴抖音视频链接，或直接粘贴 App 分享文案"
+      maxlength="-1"
+      auto-height
+      bindinput="onInput"
+    />
+
+    <view class="actions">
+      <button
+        class="primary-button"
+        loading="{{parsing}}"
+        disabled="{{parsing}}"
+        bindtap="parseCurrent"
+      >
+        {{parsing ? "解析中" : "解析视频"}}
+      </button>
+      <button class="secondary-button" disabled="{{parsing}}" bindtap="clearInput">清空</button>
+    </view>
+
+    <view wx:if="{{error}}" class="error-box">{{error}}</view>
+  </view>
+
+  <view wx:if="{{video}}" class="panel result-panel">
+    <video
+      class="preview-video"
+      src="{{video.previewUrl}}"
+      poster="{{video.coverUrl}}"
+      controls
+      show-fullscreen-btn
+      enable-play-gesture
+    />
+
+    <view class="video-info">
+      <text class="video-title">{{video.title}}</text>
+      <text class="video-author">{{video.authorName}}</text>
+      <text class="video-id">AWEME ID: {{video.awemeId}}</text>
+    </view>
+
+    <view class="result-actions">
+      <button
+        class="primary-button"
+        loading="{{saving}}"
+        disabled="{{saving}}"
+        bindtap="saveVideo"
+      >
+        {{saving ? "保存中" : "保存到相册"}}
+      </button>
+      <button class="secondary-button" bindtap="copyResolvedUrl">复制原链接</button>
+    </view>
+  </view>
+
+  <view wx:else class="empty-panel">
+    <text>等待解析视频</text>
+  </view>
+</view>

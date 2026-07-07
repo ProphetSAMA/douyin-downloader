@@ -18,4 +18,4 @@ VOLUME ["/app/Downloaded"]
 EXPOSE 8000
 
 ENTRYPOINT ["python", "run.py"]
-CMD ["--serve", "--serve-port", "8000", "-c", "config.yml"]
+CMD ["--serve", "--serve-host", "0.0.0.0", "--serve-port", "8000", "-c", "config.yml"]

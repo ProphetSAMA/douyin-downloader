@@ -1,4 +1,3 @@
-# Force rebuild - 2026-07-07
 FROM python:3.12-slim
 
 WORKDIR /app
@@ -9,6 +8,10 @@ RUN apt-get update && \
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Force cache invalidation for config.yml
+COPY config.yml /tmp/config.yml
+RUN rm /tmp/config.yml
 
 COPY . .
 

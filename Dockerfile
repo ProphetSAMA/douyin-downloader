@@ -15,5 +15,7 @@ RUN mkdir -p /app/Downloaded
 
 VOLUME ["/app/Downloaded"]
 
+EXPOSE 8000
+
 ENTRYPOINT ["python", "run.py"]
-CMD ["-c", "config.yml"]
+CMD ["--serve", "--serve-port", "8000", "-c", "config.yml"]

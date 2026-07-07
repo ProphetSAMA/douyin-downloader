@@ -13,7 +13,7 @@ COPY . .
 
 RUN mkdir -p /app/Downloaded
 
-VOLUME ["/app/Downloaded", "/app/config.yml"]
+VOLUME ["/app/Downloaded"]
 
 ENTRYPOINT ["python", "run.py"]
 CMD ["-c", "config.yml"]

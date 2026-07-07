@@ -1,33 +1,17 @@
 const config = require("../config");
 
-function getBaseUrl() {
-  return String(config.apiBaseUrl || "").replace(/\/+$/, "");
-}
-
-function joinUrl(path) {
-  const cleanPath = String(path || "").replace(/^\/+/, "");
-  return `${getBaseUrl()}/${cleanPath}`;
-}
-
-function absoluteUrl(value) {
-  const url = String(value || "");
-  if (!url) {
-    return "";
-  }
-  if (/^https?:\/\//i.test(url)) {
-    return url;
-  }
-  return joinUrl(url);
-}
-
 function request(options) {
   return new Promise((resolve, reject) => {
-    wx.request({
-      url: joinUrl(options.path),
+    wx.cloud.callContainer({
+      config: {
+        env: config.cloudEnv
+      },
+      path: options.path,
       method: options.method || "GET",
       data: options.data || {},
       header: {
-        "content-type": "application/json"
+        "content-type": "application/json",
+        "X-WX-SERVICE": config.cloudService
       },
       success(res) {
         if (res.statusCode >= 200 && res.statusCode < 300) {
@@ -42,6 +26,21 @@ function request(options) {
       }
     });
   });
+}
+
+function getBaseUrl() {
+  return config.cloudBaseUrl;
+}
+
+function absoluteUrl(value) {
+  const url = String(value || "");
+  if (!url) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+  return `${config.cloudBaseUrl}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 function getHealth() {

@@ -9,10 +9,6 @@ RUN apt-get update && \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Force cache invalidation for config.yml
-COPY config.yml /tmp/config.yml
-RUN rm /tmp/config.yml
-
 COPY . .
 
 RUN mkdir -p /app/Downloaded
